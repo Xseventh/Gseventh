@@ -11,20 +11,7 @@
 #include <cassert>
 #include <iostream>
 #include <map>
-template<typename T>
-class Singleton {
-  public:
-    static T &getInstance() {
-        static T instance;
-        return instance;
-    }
-  protected:
-    Singleton() = default;
-    ~Singleton() = default;
-  public:
-    Singleton(Singleton const &) = delete;
-    Singleton &operator=(Singleton const &) = delete;
-};
+#include "../../common/singleton.h"
 
 template<class AlphaBetaInput>
 class AlphaBetaEngine {
