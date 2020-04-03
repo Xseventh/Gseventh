@@ -2,6 +2,7 @@
 #include <string>
 #include "game/reversi_alphabeta.h"
 #include "external/jsoncpp/json.h"
+#include "algorithm/mcts/MCTSEngine.h"
 
 int main() {
     int x, y;
@@ -13,8 +14,8 @@ int main() {
     nowStatus.set(4, 4, 2);
 
     // 读入JSON
-    std::string str;
-    getline(std::cin, str);
+    ::std::string str;
+    getline(::std::cin, str);
     Json::Reader reader;
     Json::Value input;
     reader.parse(str, input);
@@ -29,14 +30,14 @@ int main() {
         if (x >= 0) {
             AlphaBetaReversiOpt opt
                     {static_cast<unsigned int>(x), static_cast<unsigned int>(y), static_cast<unsigned int>(3 - my)};
-            SingletonAlphaBetaReversiInput::getInstance().newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
+            AlphaBetaReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
         }
         x = input["responses"][i]["x"].asInt();
         y = input["responses"][i]["y"].asInt();
         if (x >= 0) {
             AlphaBetaReversiOpt opt
                     {static_cast<unsigned int>(x), static_cast<unsigned int>(y), static_cast<unsigned int>(my)};
-            SingletonAlphaBetaReversiInput::getInstance().newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
+            AlphaBetaReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
         }
     }
     // 看看自己本回合输入
@@ -45,7 +46,7 @@ int main() {
     if (x >= 0) {
         AlphaBetaReversiOpt
                 opt{static_cast<unsigned int>(x), static_cast<unsigned int>(y), static_cast<unsigned int>(3 - my)};
-        SingletonAlphaBetaReversiInput::getInstance().newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
+        AlphaBetaReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
     }
     nowStatus.setLastPlayer(3 - my);
     // 找出合法落子点
@@ -62,8 +63,8 @@ int main() {
         ret["response"]["y"] = -1;
     }
     Json::FastWriter writer;
-    std::cout << writer.write(ret) << std::endl;
-    std::cout << std::flush;
+    ::std::cout << writer.write(ret) << ::std::endl;
+    ::std::cout << ::std::flush;
 
     return 0;
 }

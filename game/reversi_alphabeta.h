@@ -5,7 +5,7 @@
 #ifndef GSEVENTH_GAME_REVERSI_ALPHABETA_H_
 #define GSEVENTH_GAME_REVERSI_ALPHABETA_H_
 
-#include "../algorithm/max-min/alpha-beta.h"
+#include "../algorithm/max-min/AlphaBetaEngine.h"
 #include <iostream>
 #include <random>
 
@@ -115,53 +115,52 @@ constexpr static const int sc[ROW][COL] = {
         -3, -7, -4, 1, 1, -4, -7, -3,
         20, -3, 11, 8, 8, 11, -3, 20
 };
-class AlphaBetaReversiInput : public AlphaBetaInput<ReversiTraits> {
+class AlphaBetaReversiInput : public algorithm::alpha_beta::AlphaBetaInput<ReversiTraits> {
   public:
-    Score getMaxScore() override;
-    Score getMinScore() override;
-    Score getScore(const Status &nowStatus,
+    static Score getMaxScore();
+    static Score getMinScore();
+    static Score getScore(const Status &nowStatus,
                    const Player &selfPlayer,
-                   bool isEnd = false) override; //返回当前局面得分
-    bool getAllOpt(const Status &nowStatus,
-                   std::vector<Operate> &allOpts) override; // 处于结束状态返回true
-    bool newStatus(const Status &nowStatus,
+                   bool isEnd = false); //返回当前局面得分
+    static bool getAllOpt(const Status &nowStatus,
+                   std::vector<Operate> &allOpts); // 处于结束状态返回true
+    static bool newStatus(const Status &nowStatus,
                    const Operate &opt,
-                   Status &newStatus) override; // 成功返回true
-    void setEnd(Operate &opt) override;
-    Player getNextPlayer(const Status &nowStatus) override;
+                   Status &newStatus); // 成功返回true
+    static void setEnd(Operate &opt);
+    static Player getNextPlayer(const Status &nowStatus);
 
-    int getScore2(const Status &nowStatus,
-                  const Player &selfPlayer) {
-        int res = 0;
-        bool isEnd = true;
-        for (int i = 0; i < ROW; i++) {
-            for (int j = 0; j < COL; j++) {
-                if (nowStatus[i][j] == selfPlayer) {
-                    if (nowStatus[i / 4 * 7][j / 4 * 7] && sc[i][j] != 1 &&
-                            sc[i][j] != 5 && (i % 7 != 0 || j % 7 != 0)) {
-                        if (abs(i - i / 4 * 7) <= 1 && abs(j - j / 4 * 7) <= 1)
-                            res += 15;
-                        else res += 5;
-                    } else {
-                        res += sc[i][j];
-                    }
-                } else if (nowStatus[i][j] == nextPlayer(selfPlayer)) {
-                    if (nowStatus[i / 4 * 7][j / 4 * 7] && sc[i][j] != 1 &&
-                            sc[i][j] != 5 && (i % 7 != 0 || j % 7 != 0)) {
-                        if (abs(i - i / 4 * 7) <= 1 && abs(j - j / 4 * 7) <= 1)
-                            res -= 15;
-                        else res -= 5;
-                    } else {
-                        res -= sc[i][j];
-                    }
-                } else isEnd = false;
-            }
-        }
-        return res;
-    }
+//    int getScore2(const Status &nowStatus,
+//                  const Player &selfPlayer) {
+//        int res = 0;
+//        bool isEnd = true;
+//        for (int i = 0; i < ROW; i++) {
+//            for (int j = 0; j < COL; j++) {
+//                if (nowStatus[i][j] == selfPlayer) {
+//                    if (nowStatus[i / 4 * 7][j / 4 * 7] && sc[i][j] != 1 &&
+//                            sc[i][j] != 5 && (i % 7 != 0 || j % 7 != 0)) {
+//                        if (abs(i - i / 4 * 7) <= 1 && abs(j - j / 4 * 7) <= 1)
+//                            res += 15;
+//                        else res += 5;
+//                    } else {
+//                        res += sc[i][j];
+//                    }
+//                } else if (nowStatus[i][j] == nextPlayer(selfPlayer)) {
+//                    if (nowStatus[i / 4 * 7][j / 4 * 7] && sc[i][j] != 1 &&
+//                            sc[i][j] != 5 && (i % 7 != 0 || j % 7 != 0)) {
+//                        if (abs(i - i / 4 * 7) <= 1 && abs(j - j / 4 * 7) <= 1)
+//                            res -= 15;
+//                        else res -= 5;
+//                    } else {
+//                        res -= sc[i][j];
+//                    }
+//                } else isEnd = false;
+//            }
+//        }
+//        return res;
+//    }
 };
 
-typedef AlphaBetaEngine<AlphaBetaReversiInput> AlphaBetaReversiEngine;
-typedef Singleton<AlphaBetaReversiInput> SingletonAlphaBetaReversiInput;
+typedef algorithm::alpha_beta::AlphaBetaEngine<AlphaBetaReversiInput> AlphaBetaReversiEngine;
 
 #endif //GSEVENTH_GAME_REVERSI_ALPHABETA_H_
