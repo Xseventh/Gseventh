@@ -9,13 +9,15 @@
 #include <memory>
 #include <random>
 #include <cfloat>
+#include <cassert>
+#include <algorithm>
 
 namespace algorithm {
 
 namespace mcts {
 
 enum class StatusResult {
-    LOSS,
+    LOSE,
     DRAW,
     WIN,
     NOTEND
@@ -33,18 +35,29 @@ class MCTSEngine {
       public:
         friend class MCTSEngine<MCTSInput>;
         explicit MCTSNode(::std::unique_ptr<Status> &&status)
-                : mQ(0), mN(0), mResult(StatusResult::NOTEND), mpStatus(std::move(status)) { //如果没有std::move应该无法通过编译
-            MCTSInput::getAllOpt(*status, mOpts);
-            mSon.reserve(mOpts.size());
+                : mQ(0),
+                  mN(0),
+                  player(MCTSInput::getNextPlayer(*status)),
+                  mpStatus(std::move(status)) { //如果没有std::move应该无法通过编译
+            if (!MCTSInput::getAllOpt(*mpStatus, mOpts)) {
+                mResult = MCTSInput::getEndResult(*mpStatus);
+                mOpts.clear();
+                mpStatus.reset();
+            } else {
+                mResult = StatusResult::NOTEND;
+                mSon.reserve(mOpts.size());
+            }
         }
         inline void updateWin() { mQ += 2, mN++; }
         inline void updateDraw() { mQ += 1, mN++; }
         inline void updateLose() { mN += 2; }
         inline bool expansionComplete() { return mOpts.empty(); }
         inline bool isTerminal() { return mOpts.empty() && mSon.empty(); }
+        inline Player getPlayer() { return player; }
       private:
         uint64_t mQ;
         uint64_t mN;
+        const Player player;
         ::std::unique_ptr<const Status> mpStatus;
         StatusResult mResult;
         ::std::vector<Operate> mOpts;
@@ -54,9 +67,9 @@ class MCTSEngine {
     using MCTSNodeUniqPtr = ::std::unique_ptr<MCTSNode>;
     using ConstMCTSNodeUniqPtr = ::std::unique_ptr<const MCTSNode>;
 
-    static const MCTSNodeUniqPtr &selection(MCTSNodeUniqPtr *, ::std::vector<MCTSNodeUniqPtr *> &);
+    static MCTSNodeUniqPtr &selection(MCTSNodeUniqPtr *, ::std::vector<MCTSNodeUniqPtr *> &);
 
-    static const MCTSNodeUniqPtr &expansion(MCTSNodeUniqPtr *);
+    static MCTSNodeUniqPtr &expansion(MCTSNodeUniqPtr *);
 
     static StatusResult simluation(MCTSNodeUniqPtr &);
 
@@ -68,7 +81,11 @@ class MCTSEngine {
 template<typename MCTSInput>
 typename MCTSEngine<MCTSInput>::Operate MCTSEngine<MCTSInput>::GetStep(const Status &nowStatus) {
     clock_t endTime = clock() + MCTSEngine<MCTSInput>::timelimit;
-    MCTSNode root(::std::make_unique<Status>(nowStatus));
+    MCTSNodeUniqPtr root(::std::make_unique<MCTSNode>(::std::make_unique<Status>(nowStatus)));
+    ::std::vector<Operate> rootOpts;
+    MCTSInput::getAllOpt(nowStatus, rootOpts);
+    assert(rootOpts.size());
+    ::std::reverse(rootOpts.begin(), rootOpts.end());
     while (clock() < endTime) {
         ::std::vector<MCTSNodeUniqPtr *> path;
         MCTSNodeUniqPtr &selectNode = selection(&root, path);
@@ -76,24 +93,52 @@ typename MCTSEngine<MCTSInput>::Operate MCTSEngine<MCTSInput>::GetStep(const Sta
         StatusResult result = simluation(expandNode);
         backpropagation(path, result);
     }
+
+    uint64_t maxM = 0;
+    Operate bestOpt(rootOpts[0]);
+    for (size_t i = 0; i < root->mSon.size(); i++) {
+        ::std::cout << root->mSon[i]->mN << ::std::endl;
+        if (root->mSon[i]->mN > maxM) {
+            maxM = root->mSon[i]->mN;
+            bestOpt = rootOpts[i];
+        }
+    }
+    return bestOpt;
 }
 
 template<typename MCTSInput>
-const typename MCTSEngine<MCTSInput>::MCTSNodeUniqPtr &MCTSEngine<MCTSInput>::selection(MCTSNodeUniqPtr *root,
-                                                                                        ::std::vector<MCTSNodeUniqPtr *> &path) {
+typename MCTSEngine<MCTSInput>::MCTSNodeUniqPtr &MCTSEngine<MCTSInput>::selection(MCTSNodeUniqPtr *root,
+                                                                                  ::std::vector<MCTSNodeUniqPtr *> &path) {
     path.clear();
     path.emplace_back(root);
-    while ((*root)->expansionComplete()) {// Terminal也是完全展开的，所以不需要判Terminal
+    Player rootPlayer = (*root)->getPlayer();
+    while ((*root)->expansionComplete() && !(*root)->isTerminal()) {
         MCTSNodeUniqPtr *maxSon = root;
-        float maxUctScore = ::std::numeric_limits<float>::min();
-        for (MCTSNodeUniqPtr &son:(*root)->mSon) {
-            // score = Q'/N' + sqrt(2*log(N) / N') 因为减少浮点数运算 存储为整数，且mQ和mN为原来的两倍，所以以下计算有差异
-            float uctExploitation = static_cast<float>(son->mQ) / (son->mN + FLT_EPSILON);
-            float uctExploration = sqrt(4 * log(static_cast<float>(root->mN >> 1) + 1) / (son->mN + FLT_EPSILON));
-            float uctScore = uctExploitation + uctExploration;
-            if (uctScore > maxUctScore) {
-                maxUctScore = uctScore;
-                maxSon = &son;
+        if (rootPlayer == (*root)->getPlayer()) {
+            float bestUctScore = ::std::numeric_limits<float>::lowest();
+            for (MCTSNodeUniqPtr &son:(*root)->mSon) {
+                // score = Q'/N' + sqrt(2*log(N) / N') 因为减少浮点数运算 存储为整数，且mQ和mN为原来的两倍，所以以下计算有差异
+                float uctExploitation = static_cast<float>(son->mQ) / (son->mN + FLT_EPSILON);
+                float uctExploration =
+                        sqrt(4 * log(static_cast<float>((*root)->mN >> 1) + 1) / (son->mN + FLT_EPSILON));
+                float uctScore = uctExploitation + uctExploration;
+                if (uctScore > bestUctScore) {
+                    bestUctScore = uctScore;
+                    maxSon = &son;
+                }
+            }
+        } else {
+            float bestUctScore = ::std::numeric_limits<float>::max();
+            for (MCTSNodeUniqPtr &son:(*root)->mSon) {
+                // score = Q'/N' + sqrt(2*log(N) / N') 因为减少浮点数运算 存储为整数，且mQ和mN为原来的两倍，所以以下计算有差异
+                float uctExploitation = static_cast<float>(son->mQ) / (son->mN + FLT_EPSILON);
+                float uctExploration =
+                        sqrt(4 * log(static_cast<float>((*root)->mN >> 1) + 1) / (son->mN + FLT_EPSILON));
+                float uctScore = uctExploitation - uctExploration;
+                if (uctScore < bestUctScore) {
+                    bestUctScore = uctScore;
+                    maxSon = &son;
+                }
             }
         }
         root = maxSon;
@@ -103,12 +148,14 @@ const typename MCTSEngine<MCTSInput>::MCTSNodeUniqPtr &MCTSEngine<MCTSInput>::se
 }
 
 template<typename MCTSInput>
-const typename MCTSEngine<MCTSInput>::MCTSNodeUniqPtr &MCTSEngine<MCTSInput>::expansion(MCTSNodeUniqPtr *node) {
+typename MCTSEngine<MCTSInput>::MCTSNodeUniqPtr &MCTSEngine<MCTSInput>::expansion(MCTSNodeUniqPtr *node) {
     if ((*node)->expansionComplete())return *node;
-    auto sonStatus = ::std::make_unique<Status>();
+    ::std::unique_ptr<Status> sonStatus = ::std::make_unique<Status>();
     MCTSInput::newStatus(*(*node)->mpStatus, (*node)->mOpts.back(), *sonStatus);
-    (*node)->mSon.emplace_back(std::move(sonStatus));
+    (*node)->mSon.emplace_back(::std::make_unique<MCTSNode>(::std::move(sonStatus)));
     (*node)->mOpts.pop_back();
+    if ((*node)->mOpts.empty())
+        (*node)->mpStatus.reset();
     return (*node)->mSon.back();
 }
 template<typename MCTSInput>
@@ -120,22 +167,17 @@ StatusResult MCTSEngine<MCTSInput>::simluation(MCTSNodeUniqPtr &node) {
     Status status = *node->mpStatus;
 
     static ::std::mt19937 randomEngine(::std::random_device{}());//random
-    ::std::uniform_int_distribution<size_t> range(0, allOpts.size() - 1);
 
-    while (MCTSInput::getAllOpt(allOpts)) {
+    while (MCTSInput::getAllOpt(status, allOpts)) {
+        ::std::uniform_int_distribution<size_t> range(0, allOpts.size() - 1);
         MCTSInput::newStatus(status, allOpts[range(randomEngine)], status);
     }
-    if (node->isTerminal()) {
-        node->mResult = MCTSInput::getEndResult(status);
-        return node->mResult;
-    } else {
-        return MCTSInput::getEndResult(status);
-    }
+    return MCTSInput::getEndResult(status);
 }
 template<typename MCTSInput>
 void MCTSEngine<MCTSInput>::backpropagation(std::vector<MCTSNodeUniqPtr *> &path, StatusResult result) {
     switch (result) {
-        case StatusResult::LOSS:
+        case StatusResult::LOSE:
             for (MCTSNodeUniqPtr *node :path) {
                 (*node)->updateLose();
             }
@@ -159,12 +201,14 @@ template<typename Input>
 class MCTSInput {
   public:
     using Status = typename Input::Status;
+    using Player = typename Input::Player;
     using Operate = typename Input::Operate;
     static const int timelimit = Input::timelimit;
 
-    static bool getAllOpt(const Status &nowStatus, ::std::vector<Operate> &allOpts);
+    static bool getAllOpt(const Status &nowStatus, ::std::vector<Operate> &allOpts); // 处于结束状态返回false
     static void newStatus(const Status &nowStatus, const Operate &opt, Status &newStatus);
     static StatusResult getEndResult(const Status &nowStatus);
+    static Player getNextPlayer(const Status &nowStatus);
 };
 
 }

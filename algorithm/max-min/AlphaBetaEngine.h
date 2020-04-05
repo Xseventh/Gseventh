@@ -17,12 +17,16 @@ namespace alpha_beta {
 
 template<class AlphaBetaInput>
 class AlphaBetaEngine {
-  private:
+  public:
     using Status = typename AlphaBetaInput::Status;
     using Operate = typename AlphaBetaInput::Operate;
     using Score = typename AlphaBetaInput::Score;
     using Player = typename AlphaBetaInput::Player;
+    static Operate GetStep(const Status &nowStatus) {
+        return maxminFirst(nowStatus, clock() + AlphaBetaInput::timelimit);
+    }
 
+  private:
     static Operate maxminFirst(const Status &nowStatus, const int &timelimit) {
         Player player = AlphaBetaInput::getNextPlayer(nowStatus);
         assert(AlphaBetaInput::deep > 0);
@@ -121,11 +125,6 @@ class AlphaBetaEngine {
             return beta;
         }
     }
-
-  public:
-    static Operate GetStep(const Status &nowStatus) {
-        return maxminFirst(nowStatus, clock() + AlphaBetaInput::timelimit);
-    }
 };
 
 template<typename Input>
@@ -143,7 +142,7 @@ class AlphaBetaInput {
     static Score getMinScore();
     static Score getScore(const Status &nowStatus, const Player &selfPlayer, bool isEnd = false); //返回当前局面得分
     static bool getAllOpt(const Status &nowStatus, ::std::vector<Operate> &allOpts); // 处于结束状态返回false
-    static bool newStatus(const Status &nowStatus, const Operate &opt, Status &newStatus); // 成功返回true
+    static void newStatus(const Status &nowStatus, const Operate &opt, Status &newStatus);
     static void setEnd(Operate &opt);
     static Player getNextPlayer(const Status &nowStatus);
 };

@@ -2,7 +2,6 @@
 // Created by seventh on 2020/2/17.
 //
 #include "reversi_alphabeta.h"
-#include "../common/scanner.h"
 #include <fstream>
 #include <algorithm>
 

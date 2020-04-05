@@ -5,7 +5,7 @@
 #ifndef GSEVENTH_GAME_REVERSI_ALPHABETA_H_
 #define GSEVENTH_GAME_REVERSI_ALPHABETA_H_
 
-#include "../algorithm/max-min/AlphaBetaEngine.h"
+#include "algorithm/max-min/AlphaBetaEngine.h"
 #include <iostream>
 #include <random>
 
@@ -23,7 +23,7 @@ inline bool checkPoint(const unsigned &x, const unsigned &y) {
 struct AlphaBetaReversiOpt {
     unsigned x, y, player;
     int score;
-    bool operator<(const AlphaBetaReversiOpt &oth) const {
+    inline bool operator<(const AlphaBetaReversiOpt &oth) const {
         return score < oth.score;
     }
 };
@@ -123,7 +123,7 @@ class AlphaBetaReversiInput : public algorithm::alpha_beta::AlphaBetaInput<Rever
                    const Player &selfPlayer,
                    bool isEnd = false); //返回当前局面得分
     static bool getAllOpt(const Status &nowStatus,
-                   std::vector<Operate> &allOpts); // 处于结束状态返回true
+                   std::vector<Operate> &allOpts); // 处于结束状态返回false
     static bool newStatus(const Status &nowStatus,
                    const Operate &opt,
                    Status &newStatus); // 成功返回true

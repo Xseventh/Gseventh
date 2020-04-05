@@ -1,12 +1,11 @@
 #include <iostream>
 #include <string>
-#include "game/reversi_alphabeta.h"
+#include "game/reversi/ReversiEngine.h"
 #include "external/jsoncpp/json.h"
-#include "algorithm/mcts/MCTSEngine.h"
 
 int main() {
     int x, y;
-    AlphaBetaReversiStatus nowStatus;
+    MCTSReversiStatus nowStatus;
     // 初始化棋盘
     nowStatus.set(3, 4, 1);
     nowStatus.set(4, 3, 1);
@@ -28,35 +27,38 @@ int main() {
         x = input["requests"][i]["x"].asInt();
         y = input["requests"][i]["y"].asInt();
         if (x >= 0) {
-            AlphaBetaReversiOpt opt
-                    {static_cast<unsigned int>(x), static_cast<unsigned int>(y), static_cast<unsigned int>(3 - my)};
-            AlphaBetaReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
+            nowStatus.setNextPlayer(3 - my);
+            MCTSReversiOperate opt
+                    {static_cast<uint8_t>(x), static_cast<uint8_t>(y)};
+            MCTSReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
         }
         x = input["responses"][i]["x"].asInt();
         y = input["responses"][i]["y"].asInt();
         if (x >= 0) {
-            AlphaBetaReversiOpt opt
-                    {static_cast<unsigned int>(x), static_cast<unsigned int>(y), static_cast<unsigned int>(my)};
-            AlphaBetaReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
+            nowStatus.setNextPlayer(my);
+            MCTSReversiOperate opt
+                    {static_cast<uint8_t>(x), static_cast<uint8_t>(y)};
+            MCTSReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟我方落子
         }
     }
     // 看看自己本回合输入
     x = input["requests"][turnID]["x"].asInt();
     y = input["requests"][turnID]["y"].asInt();
     if (x >= 0) {
-        AlphaBetaReversiOpt
-                opt{static_cast<unsigned int>(x), static_cast<unsigned int>(y), static_cast<unsigned int>(3 - my)};
-        AlphaBetaReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
+        nowStatus.setNextPlayer(3 - my);
+        MCTSReversiOperate
+                opt{static_cast<uint8_t>(x), static_cast<uint8_t>(y)};
+        MCTSReversiInput::newStatus(nowStatus, opt, nowStatus); // 模拟对方落子
     }
-    nowStatus.setLastPlayer(3 - my);
-    // 找出合法落子点
-    AlphaBetaReversiOpt opt = AlphaBetaReversiEngine::GetStep(nowStatus);
 
-    // 决策结束，输出结果（你只需修改以上部分）
+    nowStatus.setNextPlayer(my);
+    // 找出合法落子点
+    MCTSReversiOperate opt = MCTSReversiEngine::GetStep(nowStatus);
+
     Json::Value ret;
+    // 决策结束，输出结果（你只需修改以上部分）
     ret["response"]["x"] = opt.x;
     ret["response"]["y"] = opt.y;
-    ret["response"]["score"] = opt.score;
 //    ret["response"]["cnt"] = cnt;
     if (opt.x == 8 && opt.y == 8) {
         ret["response"]["x"] = -1;
