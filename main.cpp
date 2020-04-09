@@ -4,7 +4,6 @@
 #include "external/jsoncpp/json.h"
 
 int main() {
-    freopen("input.txt","r",stdin);
     int x, y;
     MCTSReversiStatus nowStatus;
     // 初始化棋盘
