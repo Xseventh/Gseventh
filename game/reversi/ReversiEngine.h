@@ -118,7 +118,7 @@ class MCTSReversiTraits {
     using Status = MCTSReversiStatus;
     using Operate = MCTSReversiOperate;
     using Player = MCTSReversiPlayer;
-    static const int timelimit = 9700;
+    static const int timelimit = 59700;
 };
 
 class MCTSReversiInput : public algorithm::mcts::MCTSInput<MCTSReversiTraits> {
