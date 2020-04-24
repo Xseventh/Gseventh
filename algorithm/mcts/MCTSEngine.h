@@ -11,6 +11,8 @@
 #include <cfloat>
 #include <cassert>
 #include <algorithm>
+#include <type_traits>
+#include "MCTSEngineImpl.h"
 
 namespace algorithm {
 
@@ -163,16 +165,25 @@ StatusResult MCTSEngine<MCTSInput>::simluation(MCTSNodeUniqPtr &node) {
     if (node->mResult != StatusResult::NOTEND) {
         return node->mResult;
     }
-    ::std::vector<Operate> allOpts;
-    Status status = *node->mpStatus;
+    if constexpr (has_quickGetOpt<MCTSInput, bool(const Status &, Operate &)>::value) {
+        Operate opt;
+        Status status = *node->mpStatus;
+        while (MCTSInput::quickGetOpt(status, opt)) {
+            MCTSInput::newStatus(status, opt, status);
+        }
+        return MCTSInput::getEndResult(status);
+    } else {
+        ::std::vector<Operate> allOpts;
+        Status status = *node->mpStatus;
 
-    static ::std::mt19937 randomEngine(::std::random_device{}());//random
+        static ::std::mt19937 randomEngine(::std::random_device{}());//random
 
-    while (MCTSInput::getAllOpt(status, allOpts)) {
-        ::std::uniform_int_distribution<size_t> range(0, allOpts.size() - 1);
-        MCTSInput::newStatus(status, allOpts[range(randomEngine)], status);
+        while (MCTSInput::getAllOpt(status, allOpts)) {
+            ::std::uniform_int_distribution<size_t> range(0, allOpts.size() - 1);
+            MCTSInput::newStatus(status, allOpts[range(randomEngine)], status);
+        }
+        return MCTSInput::getEndResult(status);
     }
-    return MCTSInput::getEndResult(status);
 }
 template<typename MCTSInput>
 void MCTSEngine<MCTSInput>::backpropagation(std::vector<MCTSNodeUniqPtr *> &path, StatusResult result) {
@@ -206,6 +217,8 @@ class MCTSInput {
     static const int timelimit = Input::timelimit;
 
     static bool getAllOpt(const Status &nowStatus, ::std::vector<Operate> &allOpts); // 处于结束状态返回false
+//    static bool quickGetOpt(const Status &nowStatus, Operate &opt);
+//    处于结束状态返回false (可选实现)
     static void newStatus(const Status &nowStatus, const Operate &opt, Status &newStatus);
     static StatusResult getEndResult(const Status &nowStatus);
     static Player getNextPlayer(const Status &nowStatus);

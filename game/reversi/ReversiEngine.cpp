@@ -168,6 +168,7 @@ AlphaBetaReversiInput::Player AlphaBetaReversiInput::getNextPlayer(const Status 
 void MCTSReversiStatus::setOperate(const MCTSReversiOperate &opt) {
     if (!checkPoint(opt.x, opt.y)) {
         setNextPlayer(nextPlayer(mNextPlayer));
+        mLastSkip = true;
         return;
     }
     set(opt.x, opt.y, mNextPlayer);
@@ -188,6 +189,7 @@ void MCTSReversiStatus::setOperate(const MCTSReversiOperate &opt) {
         }
     }
     setNextPlayer(nextPlayer(mNextPlayer));
+    mLastSkip = false;
 }
 
 bool MCTSReversiInput::getAllOpt(const Status &nowStatus,
@@ -215,29 +217,78 @@ bool MCTSReversiInput::getAllOpt(const Status &nowStatus,
         }
     }
     if (allOpts.empty()) {
-        if (notEnd) {
-            notEnd = false;
-            for (auto &ori : origin) {
-                const unsigned &i = ori[0], &j = ori[1];
-                if (!notEnd && nowStatus[i][j] == 0) {
-                    for (auto &k : go) {
-                        unsigned x = i + k[0], y = j + k[1];
+        if (notEnd && nowStatus.lastIsSkip())
+            return false;
+        allOpts.emplace_back(Operate{8, 8});
+    }
+    return notEnd;
+}
+
+template<int N>
+struct Factorial {
+    enum { value = N * Factorial<N - 1>::value };
+};
+template<>
+struct Factorial<0> {
+    enum { value = 1 };
+};
+template<int N>
+void decreaseCantorExpansion(int id, ::std::vector<int> &vec, ::std::vector<bool> &vis) {
+    int tmp = id / Factorial<N>::value;
+    for (int i = 0;; i++) {
+        if (vis[i] == false) {
+            tmp--;
+            if (tmp < 0) {
+                vec[N] = i;
+                vis[i] = true;
+                break;
+            }
+        }
+    }
+    if constexpr (N != 0)
+        decreaseCantorExpansion<N - 1>(id % Factorial<N>::value, vec, vis);
+}
+
+template<int N>
+void decreaseCantorExpansionHelper(int id, ::std::vector<int> &vec) {
+    vec.resize(N);
+    ::std::vector<bool> vis(N);
+    decreaseCantorExpansion<N - 1>(id, vec, vis);
+}
+
+bool MCTSReversiInput::quickGetOpt(const Status &nowStatus, Operate &opt) {
+    static ::std::mt19937 randomEngine(::std::random_device{}());//random
+    ::std::uniform_int_distribution<size_t> range(0, Factorial<8>::value);
+    int cantorExpansionRowId = range(randomEngine);
+    int cantorExpansionColId = range(randomEngine);
+    ::std::vector<int> row, col;
+    decreaseCantorExpansionHelper<8>(cantorExpansionRowId, row);
+    decreaseCantorExpansionHelper<8>(cantorExpansionColId, col);
+    const MCTSReversiPlayer player = nowStatus.getNextPlayer();
+    bool notEnd = false;
+    for (uint8_t i:row) {
+        for (uint8_t j:col) {
+            if (nowStatus[i][j] == 0) {
+                notEnd = true;
+                for (auto &k : go) {
+                    unsigned x = i + k[0], y = j + k[1];
+                    if (checkPoint(x, y) && nowStatus[x][y] == nextPlayer(player)) {
+                        while (checkPoint(x, y) && nowStatus[x][y] == nextPlayer(player)) {
+                            x = x + k[0];
+                            y = y + k[1];
+                        }
                         if (checkPoint(x, y) && nowStatus[x][y] == player) {
-                            while (checkPoint(x, y) && nowStatus[x][y] == player) {
-                                x = x + k[0];
-                                y = y + k[1];
-                            }
-                            if (checkPoint(x, y) && nowStatus[x][y] == nextPlayer(player)) {
-                                notEnd = true;
-                                break;
-                            }
+                            opt = Operate{i, j};
+                            return true;
                         }
                     }
                 }
             }
         }
-        allOpts.emplace_back(Operate{8, 8});
     }
+    if (notEnd && nowStatus.lastIsSkip())
+        return false;
+    opt = Operate{8, 8};
     return notEnd;
 }
 
@@ -258,8 +309,8 @@ algorithm::mcts::StatusResult MCTSReversiInput::getEndResult(const MCTSReversiSt
                 res--;
         }
     }
-    if(res==0)return algorithm::mcts::StatusResult::DRAW;
-    else if(res>0)return algorithm::mcts::StatusResult::WIN;
+    if (res == 0)return algorithm::mcts::StatusResult::DRAW;
+    else if (res > 0)return algorithm::mcts::StatusResult::WIN;
     else return algorithm::mcts::StatusResult::LOSE;
 }
 

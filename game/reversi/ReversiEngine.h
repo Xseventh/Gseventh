@@ -87,6 +87,8 @@ using MCTSReversiPlayer = uint8_t;
 
 class MCTSReversiStatus {
   public:
+    MCTSReversiStatus() : mLastSkip(false) {}
+
     inline const uint8_t *operator[](unsigned x) const { return mTable[x]; }
 
     void setOperate(const MCTSReversiOperate &opt);
@@ -97,6 +99,7 @@ class MCTSReversiStatus {
 
     inline void setNextPlayer(MCTSReversiPlayer player) { mNextPlayer = player; }
 
+    inline bool lastIsSkip() const { return mLastSkip; }
 
     void print() const {
         std::cout << "nextPlayer : " << static_cast<int>(getNextPlayer()) << std::endl;
@@ -111,6 +114,7 @@ class MCTSReversiStatus {
   private:
     MCTSReversiPlayer mTable[ROW][COL]{};
     MCTSReversiPlayer mNextPlayer{};
+    bool mLastSkip{};
 };
 
 class MCTSReversiTraits {
@@ -125,6 +129,7 @@ class MCTSReversiInput : public algorithm::mcts::MCTSInput<MCTSReversiTraits> {
   public:
     using StatusResult = algorithm::mcts::StatusResult;
     static bool getAllOpt(const Status &nowStatus, ::std::vector<Operate> &allOpts);
+    static bool quickGetOpt(const Status &nowStatus, Operate &opt);
     static void newStatus(const Status &nowStatus, const Operate &opt, Status &newStatus);
     static StatusResult getEndResult(const Status &nowStatus);
     static Player getNextPlayer(const Status &nowStatus);
