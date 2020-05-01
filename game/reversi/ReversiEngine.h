@@ -70,7 +70,7 @@ class AlphaBetaReversiInput : public algorithm::alpha_beta::AlphaBetaInput<Alpha
                           const Player &selfPlayer,
                           bool isEnd = false); //返回当前局面得分
     static bool getAllOpt(const Status &nowStatus,
-                          std::vector<Operate> &allOpts); // 处于结束状态返回true
+                          std::vector<Operate> &allOpts); // 处于结束状态返回false
     static void newStatus(const Status &nowStatus,
                           const Operate &opt,
                           Status &newStatus);

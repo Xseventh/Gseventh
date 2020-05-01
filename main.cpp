@@ -1,9 +1,10 @@
 #include <iostream>
 #include <string>
 #include "game/reversi/ReversiEngine.h"
+#include "game/gomuku/GomukuEngine.h"
 #include "external/jsoncpp/json.h"
 
-int main() {
+int ReversiMain() {
     int x, y;
     MCTSReversiStatus nowStatus;
     // 初始化棋盘
@@ -69,4 +70,45 @@ int main() {
     ::std::cout << ::std::flush;
 
     return 0;
+}
+
+int GomukuMain() {
+    AlphaBetaGomukuTraits::Status gameStatus, newGameStatus;
+    AlphaBetaGomukuTraits::Operate opt;
+    // 读入JSON
+    ::std::string str;
+    getline(::std::cin, str);
+    Json::Reader reader;
+    Json::Value input;
+    reader.parse(str, input);
+    // 分析自己收到的输入和自己过往的输出，并恢复状态
+    int turnID = input["responses"].size();
+    for (int i = 0; i < turnID; i++) {
+        opt.x = input["requests"][i]["x"].asInt(), opt.y = input["requests"][i]["y"].asInt();
+        gameStatus.setLastPlayer(2);
+        AlphaBetaGomukuInput::newStatus(gameStatus, opt, newGameStatus);
+        gameStatus = newGameStatus;
+        opt.x = input["responses"][i]["x"].asInt(), opt.y = input["responses"][i]["y"].asInt();
+        gameStatus.setLastPlayer(1);
+        AlphaBetaGomukuInput::newStatus(gameStatus, opt, newGameStatus);
+        gameStatus = newGameStatus;
+    }
+    opt.x = input["requests"][turnID]["x"].asInt(), opt.y = input["requests"][turnID]["y"].asInt();
+    gameStatus.setLastPlayer(2);
+    AlphaBetaGomukuInput::newStatus(gameStatus, opt, newGameStatus);
+    gameStatus = newGameStatus;
+    opt = AlphaBetaGomukuEngine::GetStep(gameStatus);
+    // 做出决策存为myAction
+    // 输出决策JSON
+    Json::Value ret, opts;
+    opts["x"] = opt.x;
+    opts["y"] = opt.y;
+    ret["response"] = opts;
+    Json::FastWriter writer;
+    ::std::cout << writer.write(ret) << ::std::endl;
+    return 0;
+}
+
+int main() {
+    return GomukuMain();
 }

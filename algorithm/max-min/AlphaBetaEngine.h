@@ -71,7 +71,7 @@ class AlphaBetaEngine {
                         int deep,
                         const clock_t &timelimit) {
         Player player = AlphaBetaInput::getNextPlayer(nowStatus);
-        if (deep == 0 || clock() > timelimit) {
+        if (deep == 0 || clock() >= timelimit) {
             return AlphaBetaInput::getScore(nowStatus, selfPlayer);
         }
         ::std::vector<Operate> allOpts;
