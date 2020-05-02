@@ -99,7 +99,6 @@ typename MCTSEngine<MCTSInput>::Operate MCTSEngine<MCTSInput>::GetStep(const Sta
     uint64_t maxM = 0;
     Operate bestOpt(rootOpts[0]);
     for (size_t i = 0; i < root->mSon.size(); i++) {
-        ::std::cout << root->mSon[i]->mN << ::std::endl;
         if (root->mSon[i]->mN > maxM) {
             maxM = root->mSon[i]->mN;
             bestOpt = rootOpts[i];
