@@ -50,8 +50,8 @@ class MCTSEngine {
                 mSon.reserve(mOpts.size());
             }
         }
-        inline void updateWin() { mQ += 2, mN++; }
-        inline void updateDraw() { mQ += 1, mN++; }
+        inline void updateWin() { mQ += 2, mN += 2; }
+        inline void updateDraw() { mQ += 1, mN += 2; }
         inline void updateLose() { mN += 2; }
         inline bool expansionComplete() { return mOpts.empty(); }
         inline bool isTerminal() { return mOpts.empty() && mSon.empty(); }
