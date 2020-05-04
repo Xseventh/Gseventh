@@ -299,13 +299,14 @@ void MCTSReversiInput::newStatus(const Status &nowStatus,
     newStatus.setOperate(opt);
 }
 
-algorithm::mcts::StatusResult MCTSReversiInput::getEndResult(const MCTSReversiStatus &nowStatus) {
+algorithm::mcts::StatusResult MCTSReversiInput::getEndResult(const MCTSReversiStatus &nowStatus,
+                                                             const Player &selfPlayer) {
     int res = 0;
     for (int i = 0; i < ROW; i++) {
         for (int j = 0; j < COL; j++) {
-            if (nowStatus[i][j] == nowStatus.getNextPlayer())
+            if (nowStatus[i][j] == selfPlayer)
                 res++;
-            else if (nowStatus[i][j] == nextPlayer(nowStatus.getNextPlayer()))
+            else if (nowStatus[i][j] == nextPlayer(selfPlayer))
                 res--;
         }
     }

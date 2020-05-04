@@ -42,7 +42,7 @@ class MCTSEngine {
                   player(MCTSInput::getNextPlayer(*status)),
                   mpStatus(std::move(status)) { //如果没有std::move应该无法通过编译
             if (!MCTSInput::getAllOpt(*mpStatus, mOpts)) {
-                mResult = MCTSInput::getEndResult(*mpStatus);
+                mResult = MCTSInput::getEndResult(*mpStatus, player);
                 mOpts.clear();
                 mpStatus.reset();
             } else {
@@ -73,7 +73,7 @@ class MCTSEngine {
 
     static MCTSNodeUniqPtr &expansion(MCTSNodeUniqPtr *);
 
-    static StatusResult simluation(MCTSNodeUniqPtr &);
+    static StatusResult simluation(MCTSNodeUniqPtr &, const Player &selfPlayer);
 
     static void backpropagation(::std::vector<MCTSNodeUniqPtr *> &, StatusResult);
   public:
@@ -84,6 +84,7 @@ template<typename MCTSInput>
 typename MCTSEngine<MCTSInput>::Operate MCTSEngine<MCTSInput>::GetStep(const Status &nowStatus) {
     clock_t endTime = clock() + MCTSEngine<MCTSInput>::timelimit;
     MCTSNodeUniqPtr root(::std::make_unique<MCTSNode>(::std::make_unique<Status>(nowStatus)));
+    const Player rootPlayer = root->getPlayer();
     ::std::vector<Operate> rootOpts;
     MCTSInput::getAllOpt(nowStatus, rootOpts);
     assert(rootOpts.size());
@@ -92,7 +93,7 @@ typename MCTSEngine<MCTSInput>::Operate MCTSEngine<MCTSInput>::GetStep(const Sta
         ::std::vector<MCTSNodeUniqPtr *> path;
         MCTSNodeUniqPtr &selectNode = selection(&root, path);
         MCTSNodeUniqPtr &expandNode = expansion(&selectNode);
-        StatusResult result = simluation(expandNode);
+        StatusResult result = simluation(expandNode, rootPlayer);
         backpropagation(path, result);
     }
 
@@ -160,7 +161,7 @@ typename MCTSEngine<MCTSInput>::MCTSNodeUniqPtr &MCTSEngine<MCTSInput>::expansio
     return (*node)->mSon.back();
 }
 template<typename MCTSInput>
-StatusResult MCTSEngine<MCTSInput>::simluation(MCTSNodeUniqPtr &node) {
+StatusResult MCTSEngine<MCTSInput>::simluation(MCTSNodeUniqPtr &node, const Player &selfPlayer) {
     if (node->mResult != StatusResult::NOTEND) {
         return node->mResult;
     }
@@ -170,7 +171,7 @@ StatusResult MCTSEngine<MCTSInput>::simluation(MCTSNodeUniqPtr &node) {
         while (MCTSInput::quickGetOpt(status, opt)) {
             MCTSInput::newStatus(status, opt, status);
         }
-        return MCTSInput::getEndResult(status);
+        return MCTSInput::getEndResult(status, selfPlayer);
     } else {
         ::std::vector<Operate> allOpts;
         Status status = *node->mpStatus;
@@ -181,7 +182,7 @@ StatusResult MCTSEngine<MCTSInput>::simluation(MCTSNodeUniqPtr &node) {
             ::std::uniform_int_distribution<size_t> range(0, allOpts.size() - 1);
             MCTSInput::newStatus(status, allOpts[range(randomEngine)], status);
         }
-        return MCTSInput::getEndResult(status);
+        return MCTSInput::getEndResult(status, selfPlayer);
     }
 }
 template<typename MCTSInput>
@@ -219,7 +220,7 @@ class MCTSInput {
 //    static bool quickGetOpt(const Status &nowStatus, Operate &opt);
 //    处于结束状态返回false (可选实现)
     static void newStatus(const Status &nowStatus, const Operate &opt, Status &newStatus);
-    static StatusResult getEndResult(const Status &nowStatus);
+    static StatusResult getEndResult(const Status &nowStatus, const Player &selfPlayer);
     static Player getNextPlayer(const Status &nowStatus);
 };
 

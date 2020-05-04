@@ -131,7 +131,7 @@ class MCTSReversiInput : public algorithm::mcts::MCTSInput<MCTSReversiTraits> {
     static bool getAllOpt(const Status &nowStatus, ::std::vector<Operate> &allOpts);
     static bool quickGetOpt(const Status &nowStatus, Operate &opt);
     static void newStatus(const Status &nowStatus, const Operate &opt, Status &newStatus);
-    static StatusResult getEndResult(const Status &nowStatus);
+    static StatusResult getEndResult(const Status &nowStatus, const Player &selfPlayer);
     static Player getNextPlayer(const Status &nowStatus);
 };
 
